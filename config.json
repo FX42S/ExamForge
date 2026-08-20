@@ -1,0 +1,7 @@
+{
+  "lmstudio.model.name" : "kimi",
+  "lmstudio.ocr.prompt" : "提取文字分析文本，完成：\n1. 提取知识点（含课程、章节、编号、术语、定义）\n2. 每个知识点生成1选择+1判断+1填空\n3. 输出格式：\n\n课程：{课程}\n章节：{章节}\n知识点：{术语} [{编号}]\n定义：{定义}\n\n【选择】{编号}-选. {题干} A... B... C... D... 答案： 解析：\n【判断】{编号}-判. {题干} 答案： 解析：\n【填空】{编号}-填. {题干} 答案： 解析：",
+  "pdf.layout.analyzer.enabled" : "true",
+  "lmstudio.api.url" : "http://192.168.100.101:1234/v1/chat/completions",
+  "lmstudio.max.tokens" : "150000"
+}

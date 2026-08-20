@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>快速题目生成</title>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: sans-serif; background: #f8f9fa; color: #212529; line-height: 1.6; }
+        .container { max-width: 900px; margin: 0 auto; padding: 40px 20px; }
+        .header { text-align: center; margin-bottom: 40px; }
+        .header h1 { font-size: 2rem; color: #1a1a2e; margin-bottom: 8px; }
+        .header p { color: #6c757d; font-size: 1rem; }
+        .upload-section { background: #fff; border-radius: 8px; padding: 24px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+        .upload-title { font-size: 1.125rem; font-weight: 500; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+        .upload-area { background: #fff; border: 2px dashed #dee2e6; border-radius: 8px; padding: 40px 20px; text-align: center; cursor: pointer; transition: all 0.2s; }
+        .upload-area:hover { border-color: #1a1a2e; }
+        .upload-area.selected { border-color: #28a745; background: #f8fff8; }
+        .file-list { margin-top: 12px; }
+        .file-box { display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: #f8f9fa; border-radius: 6px; margin-bottom: 8px; border: 1px solid #e9ecef; }
+        .file-icon { font-size: 20px; }
+        .file-name { flex: 1; font-size: 0.875rem; word-break: break-all; }
+        .file-size { font-size: 0.75rem; color: #6c757d; }
+        .file-remove { background: none; border: none; color: #dc3545; cursor: pointer; font-size: 1rem; padding: 4px; }
+        .submit-btn { width: 100%; padding: 16px 24px; background: #1a1a2e; color: white; border: none; border-radius: 8px; font-size: 1rem; font-weight: 500; cursor: pointer; }
+        .submit-btn:hover:not(:disabled) { background: #0f3460; }
+        .submit-btn:disabled { background: #adb5bd; cursor: not-allowed; }
+        .alert { padding: 16px; border-radius: 8px; margin-bottom: 24px; display: none; }
+        .alert.show { display: block; }
+        .alert-error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .alert-success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .alert-info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        .task-list-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+        .task-list-header h3 { font-size: 1.125rem; color: #1a1a2e; }
+        .clear-btn { background: #dc3545; color: white; border: none; padding: 8px 16px; border-radius: 6px; font-size: 0.875rem; cursor: pointer; }
+        .clear-btn:hover { background: #c82333; }
+        .task-card { background: #fff; border-radius: 8px; padding: 16px; margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); display: flex; align-items: center; gap: 12px; }
+        .task-card.pending { border-left: 4px solid #6c757d; }
+        .task-card.processing { border-left: 4px solid #ffc107; }
+        .task-card.completed { border-left: 4px solid #28a745; }
+        .task-card.failed { border-left: 4px solid #dc3545; }
+        .task-icon { width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+        .task-icon.pending { background: #e9ecef; }
+        .task-icon.processing { background: #fff3cd; }
+        .task-icon.completed { background: #d4edda; }
+        .task-icon.failed { background: #f8d7da; }
+        .task-content { flex: 1; min-width: 0; }
+        .task-title { font-weight: 500; font-size: 0.875rem; margin-bottom: 2px; }
+        .task-status { font-size: 0.8rem; color: #6c757d; }
+        .task-progress { width: 100%; height: 4px; background: #e9ecef; border-radius: 2px; margin-top: 6px; overflow: hidden; }
+        .task-progress-fill { height: 100%; background: #1a1a2e; transition: width 0.3s; }
+        .download-btn-small { background: #28a745; color: white; border: none; padding: 6px 12px; border-radius: 4px; font-size: 0.75rem; cursor: pointer; text-decoration: none; }
+        .download-btn-small:hover { background: #218838; }
+        .empty-state { text-align: center; padding: 30px; color: #6c757d; font-size: 0.875rem; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>快速题目生成</h1>
+        <p>上传多个 PDF 文件，系统依次处理，每份生成 500 道题目</p>
+    </div>
+
+    <div id="alertBox" class="alert"></div>
+
+    <div class="upload-section">
+        <div class="upload-title">📤 上传PDF文件（支持多选）</div>
+        <div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()">
+            <div style="color:#28a745;font-weight:bold;font-size:1.125rem;">点击选择 PDF 文件</div>
+            <div style="font-size:0.875rem;color:#6c757d;margin-top:8px;">支持多选，每次最多10个文件，单个不超过 300MB</div>
+        </div>
+        <input type="file" id="fileInput" accept=".pdf" multiple style="display:none" onchange="onFilesSelected(this)">
+        <div class="file-list" id="fileList"></div>
+        <button class="submit-btn" id="submitBtn" onclick="submitFiles()" disabled style="margin-top:16px;">提交生成</button>
+    </div>
+
+    <div class="upload-section">
+        <div class="task-list-header">
+            <h3>📋 任务队列</h3>
+            <button class="clear-btn" onclick="clearCompleted()">清空已完成</button>
+        </div>
+        <div id="taskContainer"><div class="empty-state">暂无任务</div></div>
+    </div>
+</div>
+
+<script>
+var selectedFiles = [];
+var tasks = new Map();
+var pollInterval = null;
+
+function showAlert(msg, type) {
+    var box = document.getElementById('alertBox');
+    if (!box) return;
+    box.textContent = msg;
+    box.className = 'alert alert-' + type + ' show';
+    setTimeout(function() { box.className = 'alert'; }, 5000);
+}
+
+function formatSize(bytes) {
+    if (bytes === 0) return '0 B';
+    var k = 1024;
+    var sizes = ['B', 'KB', 'MB', 'GB'];
+    var i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+function onFilesSelected(input) {
+    var files = Array.from(input.files);
+    if (files.length === 0) return;
+
+    // 限制最多10个文件
+    if (selectedFiles.length + files.length > 10) {
+        showAlert('最多只能选择 10 个文件', 'error');
+        return;
+    }
+
+    files.forEach(function(file) {
+        if (file.size > 300 * 1024 * 1024) {
+            showAlert('文件 ' + file.name + ' 超过 300MB，已跳过', 'error');
+            return;
+        }
+        selectedFiles.push(file);
+    });
+
+    renderFileList();
+    document.getElementById('uploadArea').classList.add('selected');
+    document.getElementById('submitBtn').disabled = selectedFiles.length === 0;
+}
+
+function renderFileList() {
+    var list = document.getElementById('fileList');
+    if (selectedFiles.length === 0) {
+        list.innerHTML = '';
+        return;
+    }
+    var html = '';
+    selectedFiles.forEach(function(file, index) {
+        html += '<div class="file-box">' +
+            '<span class="file-icon">📄</span>' +
+            '<span class="file-name">' + file.name + '</span>' +
+            '<span class="file-size">' + formatSize(file.size) + '</span>' +
+            '<button class="file-remove" onclick="removeFile(' + index + ')">✕</button>' +
+            '</div>';
+    });
+    list.innerHTML = html;
+}
+
+function removeFile(index) {
+    selectedFiles.splice(index, 1);
+    renderFileList();
+    if (selectedFiles.length === 0) {
+        document.getElementById('uploadArea').classList.remove('selected');
+        document.getElementById('fileInput').value = '';
+    }
+    document.getElementById('submitBtn').disabled = selectedFiles.length === 0;
+}
+
+async function submitFiles() {
+    if (selectedFiles.length === 0) {
+        showAlert('请先选择 PDF 文件', 'error');
+        return;
+    }
+
+    var btn = document.getElementById('submitBtn');
+    btn.disabled = true;
+    btn.textContent = '提交中...';
+
+    var formData = new FormData();
+    selectedFiles.forEach(function(file) {
+        formData.append('files', file);
+    });
+
+    try {
+        var res = await fetch('/api/fast/generate/batch', { method: 'POST', body: formData });
+        var data = await res.json();
+
+        if (data && data.success) {
+            showAlert('已提交 ' + data.data.length + ' 个任务到队列', 'success');
+            // 将返回的任务添加到本地任务列表
+            data.data.forEach(function(task) {
+                tasks.set(task.taskId, task);
+            });
+            renderTasks();
+            startPolling();
+            // 清空已选文件
+            selectedFiles = [];
+            renderFileList();
+            document.getElementById('uploadArea').classList.remove('selected');
+            document.getElementById('fileInput').value = '';
+        } else {
+            showAlert((data && data.message) || '提交失败', 'error');
+        }
+    } catch(e) {
+        showAlert('请求失败: ' + e.message, 'error');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = '提交生成';
+    }
+}
+
+function startPolling() {
+    if (pollInterval) return;
+    pollInterval = setInterval(async function() {
+        var hasPending = false;
+        tasks.forEach(function(task) {
+            if (task.status === 'pending' || task.status === 'processing') {
+                hasPending = true;
+            }
+        });
+        if (!hasPending) {
+            clearInterval(pollInterval);
+            pollInterval = null;
+            return;
+        }
+
+        // 批量查询任务状态
+        try {
+            var res = await fetch('/api/fast/tasks');
+            var data = await res.json();
+            if (data && data.success) {
+                data.data.forEach(function(task) {
+                    tasks.set(task.taskId, task);
+                });
+                renderTasks();
+            }
+        } catch(e) {
+            console.error('轮询失败:', e);
+        }
+    }, 3000);
+}
+
+function renderTasks() {
+    var container = document.getElementById('taskContainer');
+    if (!container) return;
+    if (tasks.size === 0) {
+        container.innerHTML = '<div class="empty-state">暂无任务</div>';
+        return;
+    }
+    var html = '';
+    tasks.forEach(function(task) {
+        var icon = task.status === 'processing' ? '⚡' : task.status === 'pending' ? '⏳' : task.status === 'completed' ? '✅' : '❌';
+        var statusText = task.status === 'pending' ? '等待中' : task.status === 'processing' ? '处理中' : task.status === 'completed' ? '已完成' : '失败';
+        html += '<div class="task-card ' + task.status + '">' +
+            '<div class="task-icon ' + task.status + '">' + icon + '</div>' +
+            '<div class="task-content">' +
+            '<div class="task-title">' + task.filename + '</div>' +
+            '<div class="task-status">' + statusText + (task.message ? ' - ' + task.message : '') + '</div>';
+        if (task.status === 'processing' || task.status === 'pending') {
+            html += '<div class="task-progress"><div class="task-progress-fill" style="width:' + (task.progress || 0) + '%"></div></div>';
+        }
+        html += '</div>';
+        if (task.status === 'completed' && task.outputPath) {
+            html += '<a href="/api/fast/download?path=' + encodeURIComponent(task.outputPath) + '" class="download-btn-small" target="_blank">下载</a>';
+        }
+        html += '</div>';
+    });
+    container.innerHTML = html;
+}
+
+function clearCompleted() {
+    tasks.forEach(function(task, id) {
+        if (task.status === 'completed' || task.status === 'failed') {
+            tasks.delete(id);
+        }
+    });
+    renderTasks();
+}
+
+// 初始渲染
+renderTasks();
+</script>
+</body>
+</html>

@@ -1,0 +1,31 @@
+server:
+  port: 8188
+
+spring:
+  application:
+    name: ocr-app
+  
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 300MB
+      max-request-size: 300MB
+
+# 配置文件存储路径（相对于运行目录或绝对路径）
+app:
+  config:
+    file: config.json
+
+logging:
+  level:
+    com.ocr.app: DEBUG
+    org.springframework.web: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: logs/app.log
+  logback:
+    rollingpolicy:
+      max-file-size: 100MB
+      max-history: 30

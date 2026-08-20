@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF 书籍智能分析</title>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: sans-serif; background: #f8f9fa; color: #212529; line-height: 1.6; }
+        .container { max-width: 900px; margin: 0 auto; padding: 40px 20px; }
+        .header { text-align: center; margin-bottom: 40px; }
+        .header h1 { font-size: 2rem; color: #1a1a2e; margin-bottom: 8px; }
+        .header p { color: #6c757d; font-size: 1rem; }
+        .upload-section { background: #fff; border-radius: 8px; padding: 24px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+        .upload-title { font-size: 1.125rem; font-weight: 500; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+        .upload-row { display: flex; gap: 16px; margin-bottom: 16px; }
+        .upload-col { flex: 1; }
+        .upload-col-label { font-size: 0.875rem; color: #495057; margin-bottom: 8px; font-weight: 500; }
+        .upload-area { background: #fff; border: 2px dashed #dee2e6; border-radius: 8px; padding: 30px 20px; text-align: center; cursor: pointer; transition: all 0.2s; }
+        .upload-area:hover { border-color: #1a1a2e; }
+        .upload-area.dragover { border-color: #0f3460; background: #f0f4f8; }
+        .upload-area.selected { border-color: #28a745; background: #f8fff8; }
+        .file-box { display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: #f8f9fa; border-radius: 6px; margin-bottom: 10px; border: 1px solid #e9ecef; }
+        .file-box.hidden { display: none; }
+        .file-icon { font-size: 20px; }
+        .file-name { flex: 1; font-size: 0.875rem; word-break: break-all; }
+        .file-size { font-size: 0.75rem; color: #6c757d; }
+        .file-remove { background: none; border: none; color: #dc3545; cursor: pointer; font-size: 1rem; padding: 4px; }
+        .submit-btn { width: 100%; padding: 16px 24px; background: #1a1a2e; color: white; border: none; border-radius: 8px; font-size: 1rem; font-weight: 500; cursor: pointer; }
+        .submit-btn:hover:not(:disabled) { background: #0f3460; }
+        .submit-btn:disabled { background: #adb5bd; cursor: not-allowed; }
+        .task-list-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+        .task-list-header h3 { font-size: 1.125rem; color: #1a1a2e; }
+        .clear-btn { background: #dc3545; color: white; border: none; padding: 8px 16px; border-radius: 6px; font-size: 0.875rem; cursor: pointer; }
+        .clear-btn:hover { background: #c82333; }
+        .task-card { background: #fff; border-radius: 8px; padding: 20px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); display: flex; align-items: center; gap: 16px; }
+        .task-card.processing { border-left: 4px solid #ffc107; }
+        .task-card.pending { border-left: 4px solid #6c757d; }
+        .task-card.completed { border-left: 4px solid #28a745; }
+        .task-card.failed { border-left: 4px solid #dc3545; }
+        .task-icon { width: 48px; height: 48px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 24px; }
+        .task-icon.processing { background: #fff3cd; }
+        .task-icon.pending { background: #e9ecef; }
+        .task-icon.completed { background: #d4edda; }
+        .task-icon.failed { background: #f8d7da; }
+        .task-content { flex: 1; min-width: 0; }
+        .task-title { font-weight: 500; margin-bottom: 4px; }
+        .task-type { font-size: 0.75rem; padding: 2px 8px; border-radius: 4px; margin-left: 8px; }
+        .task-type.book { background: #e3f2fd; color: #1976d2; }
+        .task-type.outline { background: #f3e5f5; color: #7b1fa2; }
+        .task-status { font-size: 0.875rem; color: #6c757d; }
+        .task-progress { width: 100%; height: 6px; background: #e9ecef; border-radius: 3px; margin-top: 8px; overflow: hidden; }
+        .task-progress-fill { height: 100%; background: #1a1a2e; transition: width 0.3s; }
+        .delete-btn { background: #f8f9fa; border: 1px solid #dee2e6; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 0.875rem; color: #6c757d; }
+        .delete-btn:hover { background: #dc3545; border-color: #dc3545; color: white; }
+        .alert { padding: 16px; border-radius: 8px; margin-bottom: 24px; display: none; }
+        .alert.show { display: block; }
+        .alert-error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .alert-success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .connection-status { text-align: center; font-size: 0.875rem; padding: 8px; border-radius: 6px; margin-bottom: 16px; }
+        .connection-status.connected { background: #d4edda; color: #155724; }
+        .connection-status.disconnected { background: #f8d7da; color: #721c24; }
+        .empty-state { text-align: center; padding: 40px; color: #6c757d; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>PDF 书籍智能分析</h1>
+        <p>上传 PDF 书籍和考试大纲，AI 自动提取章节、生成知识大纲和练习题</p>
+    </div>
+
+    <div id="connectionStatus" class="connection-status disconnected">🔴 正在连接服务器...</div>
+    <div id="alertBox" class="alert"></div>
+
+    <div class="upload-section">
+        <div class="upload-title">📤 上传文件</div>
+        <div class="upload-row">
+            <div class="upload-col">
+                <div class="upload-col-label">📚 教材（PDF 书籍）</div>
+                <div class="upload-area" id="bookUploadArea" onclick="document.getElementById('bookFileInput').click()">
+                    <div style="color:#28a745;font-weight:bold;">点击选择 PDF 文件</div>
+                    <div style="font-size:0.875rem;color:#6c757d;margin-top:4px;">支持 PDF 格式，不超过 300MB</div>
+                </div>
+                <input type="file" id="bookFileInput" accept=".pdf" style="display:none" onchange="onBookFileSelected(this)">
+                <div class="file-box hidden" id="bookFileBox">
+                    <span class="file-icon">📄</span>
+                    <span class="file-name" id="bookFileName"></span>
+                    <span class="file-size" id="bookFileSize"></span>
+                    <button class="file-remove" onclick="event.stopPropagation(); removeBookFile()">✕</button>
+                </div>
+            </div>
+            <div class="upload-col">
+                <div class="upload-col-label">📝 考试大纲（考试院）- 可选</div>
+                <div class="upload-area" id="outlineUploadArea" onclick="document.getElementById('outlineFileInput').click()">
+                    <div style="color:#6c757d;font-weight:bold;">点击选择 PDF 文件</div>
+                    <div style="font-size:0.875rem;color:#6c757d;margin-top:4px;">支持 PDF 格式，不超过 300MB</div>
+                </div>
+                <input type="file" id="outlineFileInput" accept=".pdf" style="display:none" onchange="onOutlineFileSelected(this)">
+                <div class="file-box hidden" id="outlineFileBox">
+                    <span class="file-icon">📄</span>
+                    <span class="file-name" id="outlineFileName"></span>
+                    <span class="file-size" id="outlineFileSize"></span>
+                    <button class="file-remove" onclick="event.stopPropagation(); removeOutlineFile()">✕</button>
+                </div>
+            </div>
+        </div>
+        <button class="submit-btn" id="submitBtn" onclick="submitAll()" disabled>提交分析</button>
+    </div>
+
+    <div class="task-list-header">
+        <h3>📋 任务列表</h3>
+        <button class="clear-btn" onclick="clearCompleted()">清空已完成</button>
+    </div>
+    <div id="taskContainer"><div class="empty-state">暂无任务</div></div>
+</div>
+
+<script>
+console.log('[PDFBook] v20260604 - loaded at', new Date().toISOString());
+
+var selectedBookFile = null;
+var selectedOutlineFile = null;
+var eventSource = null;
+var tasks = new Map();
+
+function initSSE() {
+    if (eventSource) eventSource.close();
+    eventSource = new EventSource('/api/tasks/subscribe');
+    eventSource.onopen = function() {
+        document.getElementById('connectionStatus').textContent = '🟢 已连接服务器';
+        document.getElementById('connectionStatus').className = 'connection-status connected';
+    };
+    eventSource.onerror = function() {
+        document.getElementById('connectionStatus').textContent = '🔴 连接断开，正在重连...';
+        document.getElementById('connectionStatus').className = 'connection-status disconnected';
+        setTimeout(initSSE, 3000);
+    };
+    eventSource.onmessage = function(event) {
+        try {
+            var data = JSON.parse(event.data);
+            handleMessage(data);
+        } catch(e) { console.error('JSON parse error:', e); }
+    };
+}
+
+function handleMessage(data) {
+    if (data.type === 'init') {
+        tasks.clear();
+        if (data.tasks) {
+            data.tasks.forEach(function(task) { tasks.set(task.taskId, task); });
+        }
+        renderTasks();
+    } else if (data.type === 'taskUpdate') {
+        tasks.set(data.taskId, data);
+        renderTasks();
+    }
+}
+
+function renderTasks() {
+    var container = document.getElementById('taskContainer');
+    if (!container) return;
+    if (tasks.size === 0) {
+        container.innerHTML = '<div class="empty-state">暂无任务</div>';
+        return;
+    }
+    var html = '';
+    tasks.forEach(function(task, taskId) {
+        var icon = task.status === 'processing' ? '⚡' : task.status === 'pending' ? '⏳' : task.status === 'completed' ? '✅' : '❌';
+        var typeLabel = task.taskType === 'book' ? '📚 书籍' : '📝 大纲';
+        var typeClass = task.taskType === 'book' ? 'book' : 'outline';
+        html += '<div class="task-card ' + task.status + '">' +
+            '<div class="task-icon ' + task.status + '">' + icon + '</div>' +
+            '<div class="task-content">' +
+            '<div class="task-title">' + task.fileName + '<span class="task-type ' + typeClass + '">' + typeLabel + '</span></div>' +
+            '<div class="task-status">' + (task.currentStep || '') + ': ' + (task.message || '') + '</div>';
+        if (task.status === 'processing' || task.status === 'pending') {
+            html += '<div class="task-progress"><div class="task-progress-fill" style="width:' + (task.progress || 0) + '%"></div></div>';
+        }
+        html += '</div>';
+        if (task.status !== 'processing') {
+            html += '<button class="delete-btn" onclick="removeTask(\'' + task.taskId + '\')">删除</button>';
+        }
+        html += '</div>';
+    });
+    container.innerHTML = html;
+}
+
+function showAlert(msg, type) {
+    var box = document.getElementById('alertBox');
+    if (!box) return;
+    box.textContent = msg;
+    box.className = 'alert alert-' + type + ' show';
+    setTimeout(function() { box.className = 'alert'; }, 5000);
+}
+
+function formatSize(bytes) {
+    if (bytes === 0) return '0 B';
+    var k = 1024;
+    var sizes = ['B', 'KB', 'MB', 'GB'];
+    var i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+function onBookFileSelected(input) {
+    var file = input.files[0];
+    if (!file) return;
+    selectedBookFile = file;
+    document.getElementById('bookFileName').textContent = file.name;
+    document.getElementById('bookFileSize').textContent = formatSize(file.size);
+    document.getElementById('bookFileBox').classList.remove('hidden');
+    document.getElementById('bookUploadArea').classList.add('selected');
+    document.getElementById('submitBtn').disabled = false;
+}
+
+function removeBookFile() {
+    selectedBookFile = null;
+    document.getElementById('bookFileBox').classList.add('hidden');
+    document.getElementById('bookUploadArea').classList.remove('selected');
+    document.getElementById('bookFileInput').value = '';
+    document.getElementById('submitBtn').disabled = true;
+}
+
+function onOutlineFileSelected(input) {
+    var file = input.files[0];
+    if (!file) return;
+    selectedOutlineFile = file;
+    document.getElementById('outlineFileName').textContent = file.name;
+    document.getElementById('outlineFileSize').textContent = formatSize(file.size);
+    document.getElementById('outlineFileBox').classList.remove('hidden');
+    document.getElementById('outlineUploadArea').classList.add('selected');
+}
+
+function removeOutlineFile() {
+    selectedOutlineFile = null;
+    document.getElementById('outlineFileBox').classList.add('hidden');
+    document.getElementById('outlineUploadArea').classList.remove('selected');
+    document.getElementById('outlineFileInput').value = '';
+}
+
+async function submitAll() {
+    console.log('[submitAll] 开始提交');
+    try {
+        if (!selectedBookFile) {
+            showAlert('请先选择教材书籍', 'error');
+            return;
+        }
+        if (selectedBookFile.size > 300 * 1024 * 1024) {
+            showAlert('文件大小不能超过 300MB', 'error');
+            return;
+        }
+        if (selectedOutlineFile && selectedOutlineFile.size > 300 * 1024 * 1024) {
+            showAlert('大纲文件不能超过 300MB', 'error');
+            return;
+        }
+
+        var btn = document.getElementById('submitBtn');
+        if (!btn) { console.error('submitBtn not found'); return; }
+        btn.disabled = true;
+        btn.textContent = '提交中...';
+
+        var bookForm = new FormData();
+        bookForm.append('file', selectedBookFile);
+        bookForm.append('filename', selectedBookFile.name);
+
+        var bookRes = await fetch('/api/tasks/submit/book', { method: 'POST', body: bookForm });
+        var bookData = await bookRes.json();
+        console.log('[submitAll] 书籍响应:', bookData);
+
+        if (!bookData || !bookData.success) {
+            showAlert((bookData && bookData.message) || '书籍提交失败', 'error');
+            btn.disabled = false;
+            btn.textContent = '提交分析';
+            return;
+        }
+
+        showAlert('书籍已提交: ' + selectedBookFile.name, 'success');
+        var bookTaskId = bookData.data && bookData.data.taskId;
+
+        if (selectedOutlineFile && bookTaskId) {
+            var outlineForm = new FormData();
+            outlineForm.append('file', selectedOutlineFile);
+            outlineForm.append('filename', selectedOutlineFile.name);
+            outlineForm.append('relatedTaskId', bookTaskId);
+
+            var outlineRes = await fetch('/api/tasks/submit/outline', { method: 'POST', body: outlineForm });
+            var outlineData = await outlineRes.json();
+            console.log('[submitAll] 大纲响应:', outlineData);
+            if (outlineData && outlineData.success) {
+                showAlert('大纲已提交: ' + selectedOutlineFile.name, 'success');
+            }
+        }
+
+        removeBookFile();
+        removeOutlineFile();
+    } catch(e) {
+        console.error('[submitAll] 异常:', e);
+        showAlert('提交失败: ' + e.message, 'error');
+    } finally {
+        var btn2 = document.getElementById('submitBtn');
+        if (btn2) { btn2.textContent = '提交分析'; btn2.disabled = !selectedBookFile; }
+    }
+}
+
+async function removeTask(taskId) {
+    try {
+        var res = await fetch('/api/tasks/' + taskId, { method: 'DELETE' });
+        var data = await res.json();
+        if (data.success) { tasks.delete(taskId); renderTasks(); }
+    } catch(e) { console.error('delete error:', e); }
+}
+
+async function clearCompleted() {
+    try {
+        var res = await fetch('/api/tasks/completed', { method: 'DELETE' });
+        var data = await res.json();
+        if (data.success) {
+            tasks.forEach(function(task, id) {
+                if (task.status === 'completed' || task.status === 'failed') tasks.delete(id);
+            });
+            renderTasks();
+        }
+    } catch(e) { console.error('clear error:', e); }
+}
+
+initSSE();
+</script>
+</body>
+</html>
